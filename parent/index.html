@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html>
+<head lang="en">
+	<meta charset="UTF-8">
+	<title>iFrame API [parent]</title>
+	<style type="text/css" rel="stylesheet">
+		* { margin: 0; padding: 0; border: none; outline: none; }
+		html { width: 100%; height: 100%; }
+		body { padding: 2%; width: 96%; height: 96%; font-family: sans-serif; }
+		h1 { margin-bottom: 20px; font-size: 24px; }
+		button { margin-bottom: 20px; padding: 10px; font-size: 13px; font-weight: bold; color: darkslategray; cursor: pointer; background: transparent; border: 2px solid darkseagreen; }
+		button:hover { border-color: darkslategray; background: darkseagreen; }
+	</style>
+	<script>
+		
+		// FUNCTIONS /////////////////////////////////////////////////////////////////////////////////////////////////
+
+		function postMessageToIFrame() {
+			console.log('parent.postMessageToIFrame()');
+			
+			var _iFrame = document.getElementById('iframe-xyz');
+			
+			_iFrame.contentWindow.postMessage(
+				
+					/**
+				 * @description To let the parent window execute things correctly, this needs to be a JSON encoded key/value-object
+				 * with a predefined structure.
+				 *
+				 * @param {string} namespace Must contain 'XYZ' to identify itself as a 'XYZ' task.
+				 * @param {object} task Contains the name and the parameter of the task to be executed by the parent window.
+				 * @param {string} task.name The name of the task.
+				 * @param {object} task.pram The parameter for the task as key/value-pairs.
+				 */
+				JSON.stringify({
+					namespace: 'XYZ',
+					task: {
+						name: 'scroll',
+						param: {
+							offsetTop: '100px'
+						}
+					}
+				}),
+
+				/**
+				 * The source parameter for security reasons. Must be a valid URL including the port (if not :80).
+				 */
+				_iFrame.src
+				
+			)
+			
+		}
+		
+		// -----------------------------------------------------------------------------------------------------------
+		
+		function doTaskResize(__target, __params) {
+			console.log('parent.doTaskResize(__target, __params)');
+
+			console.log('The element dispatched the event:', __target);
+			console.log('The parameters sent with the event:', __params);
+
+			alert('Task resize executed.\nCheck console for more information.');
+
+		}
+
+		// EVENT HANDLER /////////////////////////////////////////////////////////////////////////////////////////////
+
+		function onWindowMessage(__event) {
+			console.log('parent.onWindowMessage(__event)');
+
+			console.log('The event dispatched by the element:', __event);
+
+			var _dispatcher = document.getElementById('iframe-xyz'), // the DOM element dispatched the event
+				_message; // message sent by the event
+
+			// Try to decode the event data as JSON string. If possible, assign the object to _message and if not, do nothing.
+			try { _message = JSON.parse(__event.data); }
+			catch (__exception) { console.error('The given event data is not valid JSON:', __event.data) } // not valid json
+
+			// Check if the message isn't undefined and if it's a XYZ task.
+			if (_dispatcher && _message && _message.namespace === 'XYZ') {
+
+				// Check what type of task shall be executed.
+				switch(_message.task.name) {
+
+					// Execute the task...
+					case 'resize': doTaskResize(_dispatcher, _message.task.param); break;
+
+					// or trace 'task not found'
+					default: console.error('Task "' + _message.task.name + '" not found.');
+
+				}
+
+			}
+
+		}
+		
+		// EVENTS LISTENER ///////////////////////////////////////////////////////////////////////////////////////////
+		
+		window.addEventListener('message', onWindowMessage, false);
+		
+	</script>
+</head>
+<body>
+	<h1>Parent</h1>
+	<button onclick="postMessageToIFrame()">Post message to iFrame</button>
+	<iframe id="iframe-xyz" src="http://iframeapi.iframe" width="100%" height="600px" frameborder="0">
+		<p>Your browser does not support iframes. Please update.</p>
+	</iframe>
+</body>
+</html>
